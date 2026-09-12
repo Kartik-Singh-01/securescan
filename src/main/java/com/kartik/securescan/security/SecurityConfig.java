@@ -66,30 +66,38 @@ public class SecurityConfig {
 
         http
 
+            // Disable CSRF because this is a REST/JWT-based application
             .csrf(csrf -> csrf.disable())
 
+            // JWT authentication does not use HTTP sessions
             .sessionManagement(session ->
                     session.sessionCreationPolicy(
                             SessionCreationPolicy.STATELESS))
 
+            // Authentication provider
             .authenticationProvider(authenticationProvider())
 
+            // Authorization rules
             .authorizeHttpRequests(auth -> auth
 
+                    // Public endpoints
                     .requestMatchers(
+                            "/",
+                            "/error",
                             "/auth/**",
                             "/swagger-ui/**",
                             "/v3/api-docs/**")
                     .permitAll()
 
+                    // Everything else requires authentication
                     .anyRequest()
                     .authenticated())
 
+            // JWT filter
             .addFilterBefore(
                     jwtFilter,
                     UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 }
