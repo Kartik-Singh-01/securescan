@@ -1,54 +1,145 @@
-// Generate Complete Security Report
-public ScanResultDTO generateReport(String url) {
+package com.kartik.securescan.service;
 
-    logger.info("Generating security report for: {}", url);
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
-    // Get target website status code first
-    int statusCode = websiteScanner.getStatusCode(url);
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-    ScanResultDTO dto = new ScanResultDTO();
+import com.kartik.securescan.analyzer.HeaderAnalyzer;
+import com.kartik.securescan.dto.ScanResultDTO;
+import com.kartik.securescan.entity.ScanHistory;
+import com.kartik.securescan.exception.ScanNotFoundException;
+import com.kartik.securescan.repository.ScanHistoryRepository;
+import com.kartik.securescan.scanner.WebsiteScanner;
 
-    dto.setUrl(url);
-    dto.setStatusCode(statusCode);
+@Service
+public class ScanHistoryService {
 
-    // Only calculate security score if the target was successfully scanned
-    if (statusCode < 200 || statusCode >= 300) {
+    private static final Logger logger =
+            LoggerFactory.getLogger(ScanHistoryService.class);
 
-        logger.warn(
-                "Scan unsuccessful for {}. Target returned HTTP status {}",
-                url,
-                statusCode);
+    @Autowired
+    private ScanHistoryRepository repository;
 
-        dto.setSecurityScore(0);
-        dto.setMissingHeaders(List.of());
-        dto.setRecommendations(List.of());
+    @Autowired
+    private WebsiteScanner websiteScanner;
+
+    @Autowired
+    private HeaderAnalyzer headerAnalyzer;
+
+    // Save Scan
+    public ScanHistory saveScan(ScanHistory scan) {
+
+        logger.info("Saving scan for URL: {}", scan.getUrl());
+
+        scan.setStatusCode(
+                websiteScanner.getStatusCode(scan.getUrl()));
+
+        scan.setSecurityScore(0);
+
+        scan.setScanDate(LocalDateTime.now());
+
+        ScanHistory savedScan = repository.save(scan);
+
+        logger.info(
+                "Scan saved successfully with ID: {}",
+                savedScan.getId());
+
+        return savedScan;
+    }
+
+    // Get All Scans
+    public List<ScanHistory> getAllScans() {
+
+        logger.info("Fetching all scan history.");
+
+        return repository.findAll();
+    }
+
+    // Get Scan By ID
+    public ScanHistory getScanById(Long id) {
+
+        logger.info("Fetching scan with ID: {}", id);
+
+        return repository.findById(id)
+                .orElseThrow(() ->
+                        new ScanNotFoundException(
+                                "No scan exists with ID " + id));
+    }
+
+    // Delete Scan
+    public String deleteScan(Long id) {
+
+        logger.info("Deleting scan with ID: {}", id);
+
+        ScanHistory scan = repository.findById(id)
+                .orElseThrow(() ->
+                        new ScanNotFoundException(
+                                "No scan exists with ID " + id));
+
+        repository.delete(scan);
+
+        logger.info("Scan deleted successfully.");
+
+        return "Scan deleted successfully.";
+    }
+
+    // Generate Complete Security Report
+    public ScanResultDTO generateReport(String url) {
+
+        logger.info("Generating security report for: {}", url);
+
+        // Get target website status code first
+        int statusCode = websiteScanner.getStatusCode(url);
+
+        ScanResultDTO dto = new ScanResultDTO();
+
+        dto.setUrl(url);
+        dto.setStatusCode(statusCode);
+
+        // If target website is not successful, don't calculate score
+        if (statusCode < 200 || statusCode >= 300) {
+
+            logger.warn(
+                    "Scan unsuccessful for {}. Target returned HTTP status {}",
+                    url,
+                    statusCode);
+
+            dto.setSecurityScore(0);
+            dto.setMissingHeaders(List.of());
+            dto.setRecommendations(List.of());
+
+            return dto;
+        }
+
+        // Get HTTP headers
+        Map<String, List<String>> headers =
+                websiteScanner.getHeaders(url);
+
+        // Find missing security headers
+        List<String> missingHeaders =
+                headerAnalyzer.analyzeHeaders(headers);
+
+        // Calculate security score
+        int score =
+                headerAnalyzer.calculateSecurityScore(missingHeaders);
+
+        // Generate recommendations
+        List<String> recommendations =
+                headerAnalyzer.generateRecommendations(missingHeaders);
+
+        dto.setSecurityScore(score);
+        dto.setMissingHeaders(missingHeaders);
+        dto.setRecommendations(recommendations);
+
+        logger.info(
+                "Security report generated successfully for: {}",
+                url);
 
         return dto;
     }
-
-    // Get HTTP headers
-    Map<String, List<String>> headers =
-            websiteScanner.getHeaders(url);
-
-    // Find missing security headers
-    List<String> missingHeaders =
-            headerAnalyzer.analyzeHeaders(headers);
-
-    // Calculate security score
-    int score =
-            headerAnalyzer.calculateSecurityScore(missingHeaders);
-
-    // Generate recommendations
-    List<String> recommendations =
-            headerAnalyzer.generateRecommendations(missingHeaders);
-
-    dto.setSecurityScore(score);
-    dto.setMissingHeaders(missingHeaders);
-    dto.setRecommendations(recommendations);
-
-    logger.info(
-            "Security report generated successfully for: {}",
-            url);
-
-    return dto;
 }
