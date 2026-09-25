@@ -1,194 +1,381 @@
-# 🛡️ SecureScan
+SecureScan – Web Security Header Analyzer
 
-SecureScan is a Spring Boot-based Web Security Header & Vulnerability Analyzer that scans websites for HTTP security headers, identifies missing security headers, calculates a security score, and stores scan history in PostgreSQL.
+SecureScan is a Spring Boot REST API that analyzes a website's HTTP response headers and provides a security score, missing-header information, and remediation recommendations.
 
----
+The application communicates with the submitted website through an HTTP GET request. It does not copy website source code, access the target website's database, perform penetration testing, or inspect SSL certificates in detail.
 
-## 🚀 Features
+Features
 
-- Website Security Header Scanner
-- HTTP Response Header Analysis
-- Security Score Calculation
-- Scan History Management
-- JWT Authentication
-- Role-Based Authorization (RBAC)
-- Swagger API Documentation
-- Docker Support
-- Docker Compose Support
-- Global Exception Handling
-- Professional Logging (SLF4J)
+Scan a website URL and retrieve its HTTP response status and headers
 
----
+Analyze five commonly recommended security headers:
 
-## 🛠 Tech Stack
+Content-Security-Policy
 
-### Backend
-- Java 21
-- Spring Boot
-- Spring Security
-- Hibernate / JPA
-- JWT
-- Maven
+Strict-Transport-Security
 
-### Database
-- PostgreSQL
+X-Frame-Options
 
-### API Testing
-- Swagger
-- Postman
+X-Content-Type-Options
 
-### DevOps
-- Docker
-- Docker Compose
-- Git
-- GitHub
+Referrer-Policy
 
----
+Calculate a security score based on the configured scoring rules
 
-## 🏗 Project Architecture
+Identify missing security headers
 
-```
-              User
-                │
-                ▼
-        Spring Boot REST API
-                │
-      ┌─────────┴─────────┐
-      ▼                   ▼
-Website Scanner      Authentication
-      │                   │
-      ▼                   ▼
-Header Analyzer         JWT
-      │
-      ▼
-Security Score Engine
-      │
-      ▼
- PostgreSQL Database
-```
+Generate remediation recommendations
 
----
+Store scan history in PostgreSQL
 
-## 📂 Project Structure
+JWT-based stateless authentication
 
-```
-src
-├── controller
-├── service
-├── repository
-├── entity
-├── dto
-├── security
-├── analyzer
-├── scanner
-├── config
-├── exception
-└── util
-```
+BCrypt password hashing
 
----
+Role-based authorization
 
-## ⚙ Installation
+Bean Validation for incoming requests
 
-### Clone Repository
+Centralized exception handling
 
-```bash
-git clone https://github.com/Kartik-Singh-01/securescan.git
-```
+SLF4J-based application logging
 
-```bash
-cd securescan
-```
+Swagger/OpenAPI documentation
 
-### Build
+Docker support
 
-```bash
-./mvnw clean package
-```
+Technology Stack
 
-### Run
+Java 21
 
-```bash
-./mvnw spring-boot:run
-```
+Spring Boot
 
----
+Spring Web
 
-## 🐳 Docker
+Spring Security
 
-Build Image
+JWT
 
-```bash
-docker build -t securescan .
-```
+BCrypt
 
-Run Container
+Spring Data JPA
 
-```bash
-docker run -p 8080:8080 securescan
-```
+Hibernate
 
-Docker Compose
+PostgreSQL
 
-```bash
-docker compose up
-```
+Bean Validation
 
----
+SLF4J
 
-## 📖 API Documentation
+Swagger/OpenAPI
 
-Swagger UI
+Docker
 
-```
-http://localhost:8080/swagger-ui/index.html
-```
+HttpURLConnection
 
----
+Architecture
 
-## 🔗 API Endpoints
+Client
+  |
+  v
+Controller
+  |
+  v
+Service
+  |
+  +--> WebsiteScanner --> Target Website
+  |
+  +--> HeaderAnalyzer
+  |
+  +--> Score and Recommendation Logic
+  |
+  v
+Repository
+  |
+  v
+PostgreSQL
 
-| Method | Endpoint | Description |
-|---------|----------|-------------|
-| POST | /register | Register User |
-| POST | /login | Login User |
-| POST | /scan | Scan Website |
-| GET | /history | Get Scan History |
-| DELETE | /history/{id} | Delete Scan |
-| GET | /report | Security Report |
+The main responsibilities are separated as follows:
 
----
+Controller: Receives HTTP requests and returns HTTP responses.
 
-## 🔐 Authentication
+Service: Coordinates validation, scanning, analysis, scoring, and persistence.
 
-SecureScan uses JWT Authentication for securing REST APIs.
+WebsiteScanner: Opens the HTTP connection and retrieves the target response.
 
-Features include:
+HeaderAnalyzer: Checks the returned security headers.
 
-- User Registration
-- Login
-- JWT Token Generation
-- Token Validation
-- Role-Based Authorization
+Repository: Persists and retrieves scan history.
 
----
+Entity: Represents database records.
 
-## 🚀 Future Improvements
+DTO: Defines the API request and response structure.
 
-- React Frontend
-- PDF Security Reports
-- Email Notifications
-- Scheduled Website Scans
-- OWASP Integration
-- Vulnerability Database
-- Admin Dashboard
+Security configuration: Protects endpoints and validates JWTs.
 
----
+Global exception handler: Converts exceptions into consistent API error responses.
 
-## 👨‍💻 Author
+Scan Workflow
 
-**Kartik Singh**
+The authenticated client submits a website URL.
 
-GitHub:
+The controller receives the request body.
 
-https://github.com/Kartik-Singh-01
+Bean Validation checks that the input is valid.
+
+The service sends the URL to WebsiteScanner.
+
+WebsiteScanner creates a URL object and opens an HttpURLConnection.
+
+The scanner sends a GET request to the target website.
+
+The target website returns an HTTP response.
+
+SecureScan reads the response status code and headers.
+
+HeaderAnalyzer checks whether the required security headers are present.
+
+The score and recommendations are generated.
+
+The scan result is stored as scan history in PostgreSQL.
+
+A response DTO is returned to the client.
+
+Example Request
+
+The exact endpoint name may vary according to the controller implementation. A typical scan request is:
+
+POST /scan
+Content-Type: application/json
+Authorization: Bearer <jwt-token>
+
+{
+  "url": "https://example.com"
+}
+
+Example Response
+
+{
+  "url": "https://example.com",
+  "statusCode": 200,
+  "securityScore": 80,
+  "missingHeaders": [
+    "Content-Security-Policy"
+  ],
+  "recommendations": [
+    "Add a Content-Security-Policy header."
+  ]
+}
+
+The response fields depend on the implemented DTOs.
+
+Security Headers
+
+Content-Security-Policy
+
+Controls which sources the browser is allowed to load and helps reduce cross-site scripting risks.
+
+Strict-Transport-Security
+
+Instructs browsers to use HTTPS for future requests and helps reduce SSL-stripping risks.
+
+X-Frame-Options
+
+Controls whether a page can be embedded in a frame and helps reduce clickjacking risks.
+
+X-Content-Type-Options
+
+With the value nosniff, it prevents browsers from incorrectly guessing a resource's content type.
+
+Referrer-Policy
+
+Controls how much referrer information is shared with other websites.
+
+The current analyzer focuses on header presence unless deeper value validation has been implemented separately.
+
+Authentication and Authorization
+
+SecureScan uses stateless JWT authentication.
+
+The user registers or logs in.
+
+The password is verified using BCrypt.
+
+A signed JWT is generated after successful authentication.
+
+The client sends the token in the Authorization header.
+
+Spring Security validates the token for protected requests.
+
+The user's roles determine whether the request is allowed.
+
+Passwords are never stored in plain text. BCrypt hashes are stored instead, and PasswordEncoder.matches() verifies login credentials.
+
+Authentication answers “Who are you?” Authorization answers “What are you allowed to do?”
+
+Database Persistence
+
+Scan history is represented by a JPA entity and stored in PostgreSQL.
+
+Entity object
+    |
+    v
+Spring Data Repository
+    |
+    v
+Hibernate
+    |
+    v
+SQL INSERT/SELECT
+    |
+    v
+PostgreSQL
+
+Spring Data JPA reduces boilerplate database code, while Hibernate performs the object-relational mapping and generates SQL.
+
+Validation and Error Handling
+
+Bean Validation is applied to request DTOs using annotations such as @NotBlank, @NotNull, and URL-related validation rules.
+
+Centralized exception handling uses @ControllerAdvice and @ExceptionHandler to return consistent error responses for:
+
+Invalid input
+
+Invalid URLs
+
+Network failures
+
+Timeouts
+
+Authentication failures
+
+Authorization failures
+
+Database errors
+
+Sensitive implementation details and stack traces should not be returned to clients.
+
+Logging
+
+SLF4J is used for application logging instead of System.out.println().
+
+Useful events include:
+
+Scan request received
+
+Scan completed
+
+Target response status
+
+Timeout or network failure
+
+Authentication failures
+
+Database failures
+
+Passwords, JWTs, and other sensitive information must never be logged.
+
+Swagger/OpenAPI
+
+Swagger/OpenAPI documents the REST API and provides an interactive way to test endpoints. It can document:
+
+Request bodies
+
+Response DTOs
+
+Validation errors
+
+Authentication requirements
+
+JWT Bearer authentication
+
+HTTP response codes
+
+The Swagger UI URL depends on the configured OpenAPI library and application settings.
+
+Docker
+
+Docker packages the application and its runtime dependencies into reproducible environments.
+
+A typical setup contains:
+
+A Spring Boot application container
+
+A PostgreSQL database container
+
+A shared Docker network
+
+A persistent database volume
+
+Environment variables for database and JWT configuration
+
+Secrets and passwords should be provided through environment variables or a secret-management system rather than hardcoded in the image.
+
+Running Locally
+
+Prerequisites:
+
+Java 21
+
+Maven or Gradle
+
+PostgreSQL
+
+Docker, if using containers
+
+Configure the database and security properties in the application's configuration files or environment variables. Then run the application using the project's build tool.
+
+Typical Maven command:
+
+mvn spring-boot:run
+
+Typical package command:
+
+mvn clean package
+
+Use the exact commands defined by the project repository.
+
+Limitations
+
+SecureScan currently focuses on foundational HTTP security-header analysis. It does not necessarily:
+
+Perform penetration testing
+
+Crawl multiple pages
+
+Execute JavaScript
+
+Analyze dynamic browser behavior
+
+Inspect SSL certificates in detail
+
+Validate every security-header directive
+
+Provide a complete vulnerability assessment
+
+For production use, URL validation should also include SSRF protection, private-network blocking, safe redirect handling, DNS-rebinding protection, and strict connection/read timeouts.
+
+Future Improvements
+
+Header-value and directive validation
+
+Weighted scoring and severity levels
+
+Safe redirect-chain analysis
+
+Detailed SSL/TLS inspection
+
+Asynchronous scanning
+
+Retry and rate-limiting strategies
+
+Pagination and database indexes for scan history
+
+Audit logging
+
+Refresh tokens and MFA
+
+Monitoring and CI/CD integration
+
+Horizontal scaling for high scan volume
